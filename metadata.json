@@ -1,0 +1,6 @@
+{
+  "name": "E-Izin SMAN 1 Lawang - Surat Izin Keluar Sekolah Otomatis QR Code",
+  "description": "Sistem informasi pengelolaan surat izin keluar sekolah otomatis menggunakan QR Code di SMAN 1 Lawang dengan verifikasi Waka Kesiswaan dan notifikasi otomatis WhatsApp orang tua.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
