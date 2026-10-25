@@ -13,6 +13,8 @@ import {
 import { ExitPermit } from '../types';
 import { generateWhatsAppMessage, getWhatsAppUrl, sanitizePhoneNumber } from '../utils/whatsapp';
 
+import { copyToClipboard } from '../utils/clipboard';
+
 interface WhatsAppModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,8 +38,8 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   const message = generateWhatsAppMessage(permit);
   const waUrl = getWhatsAppUrl(permit.parentPhone, message);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message);
+  const handleCopy = async () => {
+    await copyToClipboard(message);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -55,7 +57,6 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   };
 
   const handleOpenWhatsApp = () => {
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
     onMarkAsSent(permit.id, message);
   };
 
@@ -214,14 +215,16 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
               )}
             </button>
 
-            <button
-              type="button"
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={handleOpenWhatsApp}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-[#25d366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold shadow-md shadow-[#25d366]/20 transition"
             >
               <ExternalLink className="w-4 h-4" />
               <span>Buka WhatsApp Web/App</span>
-            </button>
+            </a>
           </div>
         </div>
       </div>

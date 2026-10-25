@@ -1,12 +1,30 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
     base: './',
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(), 
+      tailwindcss(),
+      {
+        name: 'copy-404-for-github-pages',
+        closeBundle() {
+          try {
+            const distHtml = path.resolve(process.cwd(), 'dist/index.html');
+            const dist404 = path.resolve(process.cwd(), 'dist/404.html');
+            if (fs.existsSync(distHtml)) {
+              fs.copyFileSync(distHtml, dist404);
+            }
+          } catch (e) {
+            console.error('Could not copy index.html to 404.html', e);
+          }
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': path.resolve(process.cwd(), '.'),

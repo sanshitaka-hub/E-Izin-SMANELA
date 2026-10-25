@@ -69,6 +69,12 @@ export const GateScanner: React.FC<GateScannerProps> = ({
   // Start camera stream for live scanning
   const startCamera = async () => {
     setCameraError('');
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setCameraError('Browser tidak mendukung akses kamera langsung pada konteks ini. Silakan gunakan mode Unggah Gambar QR atau Input Nomor Izin Manual.');
+      setIsScanning(false);
+      return;
+    }
+
     try {
       stopCamera();
       const constraints = {
@@ -84,9 +90,11 @@ export const GateScanner: React.FC<GateScannerProps> = ({
         setIsScanning(true);
         scanVideoFrame();
       }
-    } catch (err) {
-      console.error(err);
-      setCameraError('Tidak dapat mengakses kamera. Pastikan izin kamera telah diberikan atau gunakan mode upload foto / input ID.');
+    } catch (err: unknown) {
+      // Tangani penolakan izin kamera secara halus tanpa melempar uncaught exception
+      const errorMsg = (err instanceof Error) ? err.message : String(err);
+      console.warn('Izin kamera ditolak atau tidak tersedia:', errorMsg);
+      setCameraError('Izin akses kamera belum diberikan atau tidak diizinkan oleh browser/lingkungan saat ini. Jangan khawatir, Anda tetap dapat memverifikasi QR dengan mengklik tab "Unggah Gambar QR" atau ketik kode di "Input Manual".');
       setIsScanning(false);
     }
   };

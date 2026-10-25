@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { ExitPermit } from '../types';
 import { generateTeacherShareMessage, getGeneralWhatsAppShareUrl } from '../utils/whatsapp';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface ShareTeacherModalProps {
   isOpen: boolean;
@@ -37,14 +38,13 @@ export const ShareTeacherModal: React.FC<ShareTeacherModalProps> = ({
   const message = generateTeacherShareMessage(permit, teacherName);
   const shareUrl = getGeneralWhatsAppShareUrl(message, teacherPhone);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message);
+  const handleCopy = async () => {
+    await copyToClipboard(message);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSendWA = () => {
-    window.open(shareUrl, '_blank', 'noopener,noreferrer');
     onMarkShared(permit.id, teacherName);
     setIsSent(true);
   };
@@ -192,14 +192,16 @@ export const ShareTeacherModal: React.FC<ShareTeacherModalProps> = ({
               <span>Tandai Terkirim</span>
             </button>
 
-            <button
-              type="button"
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={handleSendWA}
               className="flex-1 sm:flex-none px-4 py-2 bg-[#25d366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Buka WhatsApp & Share</span>
-            </button>
+            </a>
           </div>
         </div>
       </div>
