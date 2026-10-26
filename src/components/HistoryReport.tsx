@@ -11,10 +11,13 @@ import {
   Clock, 
   RotateCcw,
   Printer,
-  ChevronDown
+  ChevronDown,
+  Trash2,
+  CalendarClock
 } from 'lucide-react';
 import { ExitPermit } from '../types';
 import { SMANELA_CLASSES } from '../data/mockData';
+import { getDaysRemaining } from '../utils/permitCleanup';
 
 interface HistoryReportProps {
   permits: ExitPermit[];
@@ -22,6 +25,9 @@ interface HistoryReportProps {
   onOpenWhatsApp: (permit: ExitPermit) => void;
   onPreviewImage: (imageUrl: string, title: string, studentName: string) => void;
   onResetData: () => void;
+  onDeletePermit?: (permitId: string) => void;
+  onDeleteAllApproved?: () => void;
+  onCleanupExpired?: () => void;
 }
 
 export const HistoryReport: React.FC<HistoryReportProps> = ({
@@ -30,6 +36,9 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({
   onOpenWhatsApp,
   onPreviewImage,
   onResetData,
+  onDeletePermit,
+  onDeleteAllApproved,
+  onCleanupExpired,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('ALL');
@@ -109,7 +118,36 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold">
+            <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Auto-Hapus: 10 Hari Aktif</span>
+          </div>
+
+          {onDeleteAllApproved && (
+            <button
+              type="button"
+              onClick={onDeleteAllApproved}
+              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              title="Hapus seluruh surat izin yang telah disetujui"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>Hapus Semua Izin ACC</span>
+            </button>
+          )}
+
+          {onCleanupExpired && (
+            <button
+              type="button"
+              onClick={onCleanupExpired}
+              className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              title="Bersihkan surat izin yang melebihi batas 10 hari"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+              <span>Cek Kedaluwarsa 10 Hari</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onResetData}
@@ -203,8 +241,11 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({
                       <span className="font-mono font-bold text-gray-900 block text-[11px]">
                         {permit.id}
                       </span>
-                      <span className="text-[10px] text-gray-500">
+                      <span className="text-[10px] text-gray-500 block">
                         {permit.date} • {permit.timeOut} WIB
+                      </span>
+                      <span className="text-[9px] font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 inline-block mt-0.5">
+                        Sisa: {getDaysRemaining(permit)} hari
                       </span>
                     </td>
 
@@ -293,6 +334,20 @@ export const HistoryReport: React.FC<HistoryReportProps> = ({
                         >
                           <FileText className="w-4 h-4" />
                         </button>
+                        {onDeletePermit && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Hapus surat izin ${permit.id} (${permit.studentName})?\n\nTindakan ini permanen dan menghapus catatan izin dari sistem.`)) {
+                                onDeletePermit(permit.id);
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            title="Hapus Surat Izin Ini"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -17,28 +17,82 @@
   <body class="bg-slate-950 text-slate-100">
     <div id="root">
       <!-- Fallback pre-mount visual -->
-      <div id="smanela-loading-view" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #020617; color: white; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; text-align: center; padding: 20px;">
+      <div id="smanela-loading-view" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #020617; color: white; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; text-align: center; padding: 20px;">
         <div style="width: 52px; height: 52px; border: 4px solid #1e3a8a; border-top-color: #fbbf24; border-radius: 50%; animation: smanelaSpin 0.9s linear infinite; margin-bottom: 20px;"></div>
         <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff;">SMA NEGERI 1 LAWANG</div>
         <div style="display: inline-block; margin-top: 6px; padding: 4px 14px; background: rgba(30, 58, 138, 0.7); border: 1px solid #fbbf24; border-radius: 9999px; font-size: 11px; font-weight: 800; color: #fde047; letter-spacing: 0.15em;">BAKTIKU HARAPANMU</div>
         <p id="smanela-loading-text" style="margin-top: 14px; font-size: 13px; color: #94a3b8; font-weight: 500;">Memuat Sistem E-Izin Keluar Siswa...</p>
         
-        <div id="smanela-timeout-help" style="display: none; margin-top: 18px; max-width: 320px;">
-          <p style="font-size: 12px; color: #fde047; margin-bottom: 12px; line-height: 1.4;">Memuat memakan waktu lebih lama dari biasanya. Klik tombol di bawah untuk membersihkan cache:</p>
-          <button onclick="try{localStorage.clear();sessionStorage.clear();}catch(e){}location.reload();" style="padding: 9px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.4);">
-            Buka Ulang & Bersihkan Cache
-          </button>
+        <div id="smanela-error-banner" style="display: none; margin-top: 15px; padding: 10px 14px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; font-size: 11px; color: #fca5a5; max-width: 360px; text-align: left; word-break: break-word;"></div>
+
+        <div id="smanela-timeout-help" style="display: none; margin-top: 18px; max-width: 340px;">
+          <p style="font-size: 12px; color: #fde047; margin-bottom: 12px; line-height: 1.4;">Proses pemuatan memakan waktu lebih lama dari biasanya. Gunakan tombol pemulihan di bawah ini:</p>
+          <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+            <button id="smanela-btn-reload" type="button" style="padding: 9px 18px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.4);">
+              Muat Ulang Halaman
+            </button>
+            <button id="smanela-btn-reset-cache" type="button" style="padding: 9px 18px; background: #dc2626; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(220,38,38,0.4);">
+              Bersihkan Cache & Reset
+            </button>
+          </div>
         </div>
         <style>@keyframes smanelaSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
       </div>
     </div>
 
     <script>
-      // Jika loading belum selesai dalam 2.5 detik (misal cache browser tersangkut), tampilkan tombol reset cache
-      setTimeout(function() {
-        var help = document.getElementById('smanela-timeout-help');
-        if (help) help.style.display = 'block';
-      }, 2500);
+      (function() {
+        function triggerReload(clearData) {
+          if (clearData) {
+            try { localStorage.clear(); } catch(e) {}
+            try { sessionStorage.clear(); } catch(e) {}
+            if (window.caches) {
+              try {
+                caches.keys().then(function(keys) {
+                  keys.forEach(function(key) { caches.delete(key); });
+                });
+              } catch(e) {}
+            }
+          }
+          try {
+            window.location.reload();
+          } catch(e) {
+            window.location.href = window.location.origin + window.location.pathname + '?r=' + Date.now();
+          }
+        }
+
+        function initEmergencyControls() {
+          var btnReload = document.getElementById('smanela-btn-reload');
+          var btnReset = document.getElementById('smanela-btn-reset-cache');
+          if (btnReload) {
+            btnReload.onclick = function() { triggerReload(false); };
+          }
+          if (btnReset) {
+            btnReset.onclick = function() { triggerReload(true); };
+          }
+        }
+
+        // Tangkap error JavaScript global agar pengguna mendapat notifikasi jelas alih-alih loading tanpa akhir
+        window.addEventListener('error', function(e) {
+          var errBanner = document.getElementById('smanela-error-banner');
+          if (errBanner) {
+            errBanner.style.display = 'block';
+            errBanner.textContent = 'Deteksi Error: ' + (e.message || 'Gagal memuat modul sistem.');
+          }
+          var help = document.getElementById('smanela-timeout-help');
+          if (help) help.style.display = 'block';
+          initEmergencyControls();
+        });
+
+        // Tampilkan opsi pemulihan jika React belum me-mount dalam 2 detik
+        setTimeout(function() {
+          var help = document.getElementById('smanela-timeout-help');
+          if (help && document.getElementById('smanela-loading-view')) {
+            help.style.display = 'block';
+            initEmergencyControls();
+          }
+        }, 2000);
+      })();
     </script>
 
     <script type="module" src="/src/main.tsx"></script>

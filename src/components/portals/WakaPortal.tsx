@@ -7,14 +7,17 @@ import {
   XCircle, 
   Clock, 
   MessageSquare, 
-  ExternalLink,
   CheckCheck,
   Search,
-  BookOpen
+  BookOpen,
+  Trash2,
+  CalendarClock,
+  Sparkles
 } from 'lucide-react';
 import { ExitPermit } from '../../types';
 import { WakaDashboard } from '../WakaDashboard';
 import { HistoryReport } from '../HistoryReport';
+import { getDaysRemaining } from '../../utils/permitCleanup';
 
 interface WakaPortalProps {
   permits: ExitPermit[];
@@ -25,6 +28,9 @@ interface WakaPortalProps {
   onViewDocument: (permit: ExitPermit) => void;
   onPreviewImage: (imageUrl: string, title: string, studentName: string) => void;
   onResetData: () => void;
+  onDeletePermit: (permitId: string) => void;
+  onDeleteAllApproved?: () => void;
+  onCleanupExpired?: () => void;
   wakaName: string;
 }
 
@@ -37,6 +43,9 @@ export const WakaPortal: React.FC<WakaPortalProps> = ({
   onViewDocument,
   onPreviewImage,
   onResetData,
+  onDeletePermit,
+  onDeleteAllApproved,
+  onCleanupExpired,
   wakaName,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'approval' | 'shareTeacher' | 'report'>('approval');
@@ -119,6 +128,7 @@ export const WakaPortal: React.FC<WakaPortalProps> = ({
           onOpenWhatsApp={onOpenWhatsApp}
           onViewDocument={onViewDocument}
           onPreviewImage={onPreviewImage}
+          onDeletePermit={onDeletePermit}
           wakaName={wakaName}
         />
       )}
@@ -141,6 +151,28 @@ export const WakaPortal: React.FC<WakaPortalProps> = ({
                 Teruskan secara instan surat izin yang telah disetujui Waka Kesiswaan ke nomor WhatsApp Guru Mapel yang sedang mengajar atau ke Grup Guru SMAN 1 Lawang agar presensi kelas sinkron.
               </p>
             </div>
+          </div>
+
+          {/* 10-day retention & auto cleanup notice */}
+          <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900">
+            <div className="flex items-center gap-2.5">
+              <CalendarClock className="w-5 h-5 text-amber-700 shrink-0" />
+              <div>
+                <span className="font-bold">Kebijakan Pembersihan Otomatis 10 Hari Aktif:</span>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Surat izin yang telah di-ACC akan tersimpan selama maksimal 10 hari, kemudian otomatis dibersihkan oleh sistem. Anda juga dapat menghapus izin ACC secara manual sewaktu-waktu.
+                </p>
+              </div>
+            </div>
+            {onCleanupExpired && (
+              <button
+                type="button"
+                onClick={onCleanupExpired}
+                className="shrink-0 px-3 py-1.5 bg-amber-200/90 hover:bg-amber-300 text-amber-950 font-bold rounded-lg text-xs transition"
+              >
+                Cek Kedaluwarsa
+              </button>
+            )}
           </div>
 
           {/* Search box */}
@@ -172,12 +204,15 @@ export const WakaPortal: React.FC<WakaPortalProps> = ({
                   className="bg-white rounded-2xl border border-blue-200 p-5 shadow-xs hover:shadow-md transition flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-xs font-bold text-gray-800 bg-gray-100 px-2.5 py-0.5 rounded border border-gray-200">
                         {permit.id}
                       </span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200">
                         DISETUJUI WAKA
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        Sisa simpan: {getDaysRemaining(permit)} hari
                       </span>
                       {permit.sharedToTeacher && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-300">
@@ -196,7 +231,7 @@ export const WakaPortal: React.FC<WakaPortalProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     <button
                       type="button"
                       onClick={() => onOpenShareTeacher(permit)}
@@ -223,6 +258,21 @@ export const WakaPortal: React.FC<WakaPortalProps> = ({
                     >
                       Lihat Surat
                     </button>
+
+                    {/* Tombol Penghapus Surat Izin ACC */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Hapus surat izin yang telah di-ACC ini?\n\nSiswa: ${permit.studentName} (${permit.studentClass})\nNomor: ${permit.id}`)) {
+                          onDeletePermit(permit.id);
+                        }
+                      }}
+                      className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                      title="Hapus Surat Izin yang Telah Di-ACC"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>Hapus Izin ACC</span>
+                    </button>
                   </div>
                 </div>
               ))
@@ -239,6 +289,9 @@ export const WakaPortal: React.FC<WakaPortalProps> = ({
           onOpenWhatsApp={onOpenWhatsApp}
           onPreviewImage={onPreviewImage}
           onResetData={onResetData}
+          onDeletePermit={onDeletePermit}
+          onDeleteAllApproved={onDeleteAllApproved}
+          onCleanupExpired={onCleanupExpired}
         />
       )}
     </div>

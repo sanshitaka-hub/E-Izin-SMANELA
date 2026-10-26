@@ -17,11 +17,13 @@ import {
   Send,
   SlidersHorizontal,
   ChevronRight,
-  Share2
+  Share2,
+  Trash2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ExitPermit } from '../types';
 import { sounds } from '../utils/audio';
+import { getDaysRemaining } from '../utils/permitCleanup';
 
 interface WakaDashboardProps {
   permits: ExitPermit[];
@@ -31,6 +33,7 @@ interface WakaDashboardProps {
   onOpenShareTeacher?: (permit: ExitPermit) => void;
   onViewDocument: (permit: ExitPermit) => void;
   onPreviewImage: (imageUrl: string, title: string, studentName: string) => void;
+  onDeletePermit?: (permitId: string) => void;
   wakaName: string;
 }
 
@@ -42,6 +45,7 @@ export const WakaDashboard: React.FC<WakaDashboardProps> = ({
   onOpenShareTeacher,
   onViewDocument,
   onPreviewImage,
+  onDeletePermit,
   wakaName,
 }) => {
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'MENUNGGU' | 'DISETUJUI' | 'DITOLAK'>('ALL');
@@ -50,6 +54,7 @@ export const WakaDashboard: React.FC<WakaDashboardProps> = ({
   const [customNote, setCustomNote] = useState<string>('');
   const [selectedRejectPermit, setSelectedRejectPermit] = useState<ExitPermit | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('');
+  const [deleteConfirmPermit, setDeleteConfirmPermit] = useState<ExitPermit | null>(null);
 
   // Handle Approve button click
   const handleApprove = (permit: ExitPermit) => {
@@ -238,6 +243,9 @@ export const WakaDashboard: React.FC<WakaDashboardProps> = ({
                     <span className="text-xs text-gray-500">
                       Diajukan: {new Date(permit.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB ({permit.date})
                     </span>
+                    <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Masa Aktif: Sisa {getDaysRemaining(permit)} hari
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -425,6 +433,19 @@ export const WakaDashboard: React.FC<WakaDashboardProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                    {/* TOMBOL PENGHAPUS SURAT IZIN YANG TELAH DI ACC */}
+                    {isApproved && onDeletePermit && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirmPermit(permit)}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs"
+                        title="Hapus surat izin yang telah di-ACC ini"
+                      >
+                        <Trash2 className="w-4 h-4 text-rose-600" />
+                        <span>Hapus Izin ACC</span>
+                      </button>
+                    )}
+
                     {/* TOMBOL TIDAK DIBERI IZIN */}
                     <button
                       type="button"
@@ -522,6 +543,69 @@ export const WakaDashboard: React.FC<WakaDashboardProps> = ({
               >
                 <XCircle className="w-4 h-4" />
                 <span>Tetapkan Tidak Diberi Izin</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmPermit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-100 rounded-full">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-gray-900">
+                  Hapus Surat Izin yang Telah Di-ACC?
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Surat izin ini akan dihapus permanen dari sistem E-Izin SMANELA.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl text-xs text-rose-950 space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nomor Izin:</span>
+                <span className="font-mono font-bold text-gray-900">{deleteConfirmPermit.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nama Siswa:</span>
+                <span className="font-bold text-gray-900">{deleteConfirmPermit.studentName} ({deleteConfirmPermit.studentClass})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Keperluan:</span>
+                <span className="font-semibold text-gray-800">{deleteConfirmPermit.reasonCategory}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status Waka:</span>
+                <span className="font-bold text-blue-900 bg-blue-100 px-2 py-0.2 rounded border border-blue-200">DISETUJUI</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmPermit(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeletePermit && deleteConfirmPermit) {
+                    onDeletePermit(deleteConfirmPermit.id);
+                  }
+                  setDeleteConfirmPermit(null);
+                }}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 transition flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Ya, Hapus Surat Izin</span>
               </button>
             </div>
           </div>

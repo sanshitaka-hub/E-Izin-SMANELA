@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ExitPermit } from '../../types';
 import { PermitForm } from '../PermitForm';
+import { getDaysRemaining } from '../../utils/permitCleanup';
 
 interface SiswaPortalProps {
   permits: ExitPermit[];
@@ -181,8 +182,11 @@ export const SiswaPortal: React.FC<SiswaPortalProps> = ({
                               ? 'PERMOHONAN TIDAK DIBERI IZIN (DITOLAK)'
                               : 'MENUNGGU KEPUTUSAN WAKA KESISWAAN'}
                           </p>
-                          <p className="text-[11px] opacity-90">
-                            No. Izin: <span className="font-mono font-bold">{permit.id}</span> • Diajukan: {permit.date} ({permit.timeOut} WIB)
+                          <p className="text-[11px] opacity-90 flex items-center gap-2 flex-wrap mt-0.5">
+                            <span>No. Izin: <strong className="font-mono">{permit.id}</strong> • Diajukan: {permit.date} ({permit.timeOut} WIB)</span>
+                            <span className="bg-black/20 text-white px-2 py-0.2 rounded text-[10px] font-semibold">
+                              Sisa simpan: {getDaysRemaining(permit)} hari
+                            </span>
                           </p>
                         </div>
                       </div>

@@ -34,6 +34,7 @@ import { INITIAL_PERMITS, DEFAULT_WAKA, SCHOOL_INFO, PORTAL_CREDENTIALS } from '
 import SmanelaLogo from './components/SmanelaLogo';
 
 import { safeStorage } from './utils/storage';
+import { cleanupOldPermits } from './utils/permitCleanup';
 
 const STORAGE_KEY = 'smanela_exit_permits_v4';
 const WAKA_NAME_KEY = 'smanela_waka_name_v4';
@@ -54,20 +55,22 @@ export default function App() {
     return safeStorage.getItem(WAKA_NAME_KEY) || DEFAULT_WAKA.name;
   });
 
-  // Exit Permits State
+  // Exit Permits State with automatic 10-day retention cleanup
   const [permits, setPermits] = useState<ExitPermit[]>(() => {
     const saved = safeStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          const { remaining } = cleanupOldPermits(parsed);
+          return remaining;
         }
       } catch (e) {
         console.warn('Failed to parse saved permits, using defaults:', e);
       }
     }
-    return INITIAL_PERMITS;
+    const { remaining } = cleanupOldPermits(INITIAL_PERMITS);
+    return remaining;
   });
 
   // Modals state
@@ -321,6 +324,56 @@ export default function App() {
     }
   };
 
+  // Handler: Hapus satu surat izin (khususnya yang telah di-ACC / disetujui)
+  const handleDeletePermit = (permitId: string) => {
+    const target = permits.find((p) => p.id === permitId);
+    if (!target) return;
+
+    setPermits((prev) => prev.filter((p) => p.id !== permitId));
+    addToast(
+      'info',
+      'Surat Izin Dihapus',
+      `Surat izin ${target.id} atas nama ${target.studentName} (${target.studentClass}) telah dihapus dari sistem.`
+    );
+  };
+
+  // Handler: Hapus semua surat izin yang telah di-ACC
+  const handleDeleteAllApprovedPermits = () => {
+    const approvedCount = permits.filter((p) => p.status === 'DISETUJUI').length;
+    if (approvedCount === 0) {
+      addToast('info', 'Tidak Ada Data', 'Tidak ada surat izin berstatus DISETUJUI untuk dihapus.');
+      return;
+    }
+
+    if (window.confirm(`Apakah Anda yakin ingin menghapus seluruh ${approvedCount} surat izin yang telah di-ACC? Tindakan ini permanen.`)) {
+      setPermits((prev) => prev.filter((p) => p.status !== 'DISETUJUI'));
+      addToast(
+        'success',
+        'Penghapusan Berhasil',
+        `${approvedCount} surat izin yang telah di-ACC berhasil dihapus dari sistem.`
+      );
+    }
+  };
+
+  // Handler: Bersihkan surat izin yang kedaluwarsa (> 10 hari)
+  const handleForceCleanupExpired = () => {
+    const { remaining, removedCount } = cleanupOldPermits(permits);
+    if (removedCount > 0) {
+      setPermits(remaining);
+      addToast(
+        'info',
+        'Pembersihan Otomatis Selesai',
+        `${removedCount} surat izin yang berusia lebih dari 10 hari telah dibersihkan dari penyimpanan.`
+      );
+    } else {
+      addToast(
+        'info',
+        'Sistem Bersih',
+        'Semua surat izin masih dalam batas masa aktif 10 hari. Belum ada yang kedaluwarsa.'
+      );
+    }
+  };
+
   // Image preview modal opener
   const handlePreviewImage = (imageUrl: string, title: string, studentName: string) => {
     setPreviewImageState({
@@ -419,6 +472,9 @@ export default function App() {
             onViewDocument={(p) => setSelectedDocumentPermit(p)}
             onPreviewImage={handlePreviewImage}
             onResetData={handleResetData}
+            onDeletePermit={handleDeletePermit}
+            onDeleteAllApproved={handleDeleteAllApprovedPermits}
+            onCleanupExpired={handleForceCleanupExpired}
             wakaName={wakaName}
           />
         )}
