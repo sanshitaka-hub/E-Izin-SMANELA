@@ -33,6 +33,8 @@ import { ExitPermit, UserRole } from './types';
 import { INITIAL_PERMITS, DEFAULT_WAKA, SCHOOL_INFO, PORTAL_CREDENTIALS } from './data/mockData';
 import SmanelaLogo from './components/SmanelaLogo';
 
+import { safeStorage } from './utils/storage';
+
 const STORAGE_KEY = 'smanela_exit_permits_v4';
 const WAKA_NAME_KEY = 'smanela_waka_name_v4';
 const ACTIVE_ROLE_KEY = 'smanela_portal_role_v4';
@@ -40,7 +42,7 @@ const ACTIVE_ROLE_KEY = 'smanela_portal_role_v4';
 export default function App() {
   // Current logged in portal role ('SISWA' | 'GURU' | 'SATPAM' | null)
   const [currentRole, setCurrentRole] = useState<UserRole | null>(() => {
-    const saved = localStorage.getItem(ACTIVE_ROLE_KEY);
+    const saved = safeStorage.getItem(ACTIVE_ROLE_KEY);
     if (saved === 'SISWA' || saved === 'GURU' || saved === 'SATPAM') {
       return saved;
     }
@@ -49,17 +51,20 @@ export default function App() {
 
   // Waka Kesiswaan official name
   const [wakaName, setWakaName] = useState<string>(() => {
-    return localStorage.getItem(WAKA_NAME_KEY) || DEFAULT_WAKA.name;
+    return safeStorage.getItem(WAKA_NAME_KEY) || DEFAULT_WAKA.name;
   });
 
   // Exit Permits State
   const [permits, setPermits] = useState<ExitPermit[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = safeStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       } catch (e) {
-        console.error('Failed to parse saved permits', e);
+        console.warn('Failed to parse saved permits, using defaults:', e);
       }
     }
     return INITIAL_PERMITS;
@@ -84,22 +89,22 @@ export default function App() {
   // Toast notifications state
   const [notifications, setNotifications] = useState<ToastNotification[]>([]);
 
-  // Sync permits to localStorage
+  // Sync permits to storage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(permits));
+    safeStorage.setItem(STORAGE_KEY, JSON.stringify(permits));
   }, [permits]);
 
   // Sync waka name
   useEffect(() => {
-    localStorage.setItem(WAKA_NAME_KEY, wakaName);
+    safeStorage.setItem(WAKA_NAME_KEY, wakaName);
   }, [wakaName]);
 
-  // Sync role to localStorage
+  // Sync role to storage
   useEffect(() => {
     if (currentRole) {
-      localStorage.setItem(ACTIVE_ROLE_KEY, currentRole);
+      safeStorage.setItem(ACTIVE_ROLE_KEY, currentRole);
     } else {
-      localStorage.removeItem(ACTIVE_ROLE_KEY);
+      safeStorage.removeItem(ACTIVE_ROLE_KEY);
     }
   }, [currentRole]);
 
@@ -311,7 +316,7 @@ export default function App() {
   const handleResetData = () => {
     if (window.confirm('Apakah Anda yakin ingin mengatur ulang data kembali ke contoh awal SMAN 1 Lawang?')) {
       setPermits(INITIAL_PERMITS);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PERMITS));
+      safeStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PERMITS));
       addToast('info', 'Data Direset', 'Data perizinan berhasil dikembalikan ke template awal SMANELA.');
     }
   };
@@ -364,9 +369,16 @@ export default function App() {
                 <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
                   {activePortalInfo.title}
                 </span>
-                <span className="text-[10px] font-mono bg-emerald-900 text-emerald-200 px-2 py-0.5 rounded border border-emerald-700">
-                  KODE AKSES: {activePortalInfo.code}
-                </span>
+                {currentRole === 'SISWA' ? (
+                  <span className="text-[10px] font-mono bg-emerald-900 text-emerald-200 px-2 py-0.5 rounded border border-emerald-700">
+                    KODE AKSES: {activePortalInfo.code}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-semibold bg-emerald-900/80 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                    <Shield className="w-3 h-3 text-amber-400" />
+                    <span>Akses Berwenang</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-300">
                 {activePortalInfo.subtitle}

@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Trash2, Copy, Check } from 'lucide-react';
 import { copyToClipboard } from '../utils/clipboard';
+import { safeStorage } from '../utils/storage';
 
 interface Props {
   children: ReactNode;
@@ -32,13 +33,9 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleResetCache = () => {
-    try {
-      localStorage.removeItem('smanela_exit_permits_v4');
-      localStorage.removeItem('smanela_waka_name_v4');
-      localStorage.removeItem('smanela_portal_role_v4');
-    } catch {
-      // Ignore
-    }
+    safeStorage.removeItem('smanela_exit_permits_v4');
+    safeStorage.removeItem('smanela_waka_name_v4');
+    safeStorage.removeItem('smanela_portal_role_v4');
     window.location.reload();
   };
 
