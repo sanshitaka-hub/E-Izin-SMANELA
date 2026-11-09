@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { 
   FileText, 
   ShieldCheck, 
@@ -21,17 +21,21 @@ import {
 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { PortalLogin } from './components/PortalLogin';
-import { SiswaPortal } from './components/portals/SiswaPortal';
-import { WakaPortal } from './components/portals/WakaPortal';
-import { SatpamPortal } from './components/portals/SatpamPortal';
-import { PermitDocumentModal } from './components/PermitDocumentModal';
-import { WhatsAppModal } from './components/WhatsAppModal';
-import { ShareTeacherModal } from './components/ShareTeacherModal';
-import { ImagePreviewModal } from './components/ImagePreviewModal';
 import { ToastContainer, ToastNotification } from './components/NotificationToast';
 import { ExitPermit, UserRole } from './types';
 import { INITIAL_PERMITS, DEFAULT_WAKA, SCHOOL_INFO, PORTAL_CREDENTIALS } from './data/mockData';
 import SmanelaLogo from './components/SmanelaLogo';
+
+// Lazy loading portal components to drastically accelerate initial web page rendering
+const SiswaPortal = lazy(() => import('./components/portals/SiswaPortal').then((m) => ({ default: m.SiswaPortal })));
+const WakaPortal = lazy(() => import('./components/portals/WakaPortal').then((m) => ({ default: m.WakaPortal })));
+const SatpamPortal = lazy(() => import('./components/portals/SatpamPortal').then((m) => ({ default: m.SatpamPortal })));
+
+// Lazy loading modals on-demand (only fetched when opened)
+const PermitDocumentModal = lazy(() => import('./components/PermitDocumentModal').then((m) => ({ default: m.PermitDocumentModal })));
+const WhatsAppModal = lazy(() => import('./components/WhatsAppModal').then((m) => ({ default: m.WhatsAppModal })));
+const ShareTeacherModal = lazy(() => import('./components/ShareTeacherModal').then((m) => ({ default: m.ShareTeacherModal })));
+const ImagePreviewModal = lazy(() => import('./components/ImagePreviewModal').then((m) => ({ default: m.ImagePreviewModal })));
 
 import { safeStorage } from './utils/storage';
 import { cleanupOldPermits } from './utils/permitCleanup';
@@ -450,46 +454,57 @@ export default function App() {
           </div>
         </section>
 
-        {/* 1. PORTAL SISWA: KHUSUS PENGAJUAN IZIN & PEMBERITAHUAN STATUS */}
-        {currentRole === 'SISWA' && (
-          <SiswaPortal
-            permits={permits}
-            onPermitCreated={handlePermitCreated}
-            onViewDocument={(p) => setSelectedDocumentPermit(p)}
-            onPreviewImage={handlePreviewImage}
-            wakaName={wakaName}
-          />
-        )}
+        {/* Render Portal sesuai peran dengan Suspense agar load awal super cepat */}
+        <Suspense
+          fallback={
+            <div className="bg-white rounded-2xl p-12 border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center">
+              <div className="w-9 h-9 border-3 border-emerald-600 border-t-amber-400 rounded-full animate-spin mb-3"></div>
+              <p className="text-xs font-bold text-slate-700">Memuat Modul Portal...</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Menyiapkan antarmuka {activePortalInfo.title}</p>
+            </div>
+          }
+        >
+          {/* 1. PORTAL SISWA: KHUSUS PENGAJUAN IZIN & PEMBERITAHUAN STATUS */}
+          {currentRole === 'SISWA' && (
+            <SiswaPortal
+              permits={permits}
+              onPermitCreated={handlePermitCreated}
+              onViewDocument={(p) => setSelectedDocumentPermit(p)}
+              onPreviewImage={handlePreviewImage}
+              wakaName={wakaName}
+            />
+          )}
 
-        {/* 2. PORTAL GURU / WAKA: KHUSUS PERSETUJUAN, SHARE KE GURU PENGAJAR, & REKAP */}
-        {currentRole === 'GURU' && (
-          <WakaPortal
-            permits={permits}
-            onApprovePermit={handleApprovePermit}
-            onRejectPermit={handleRejectPermit}
-            onOpenWhatsApp={(p) => setSelectedWhatsAppPermit(p)}
-            onOpenShareTeacher={(p) => setSelectedShareTeacherPermit(p)}
-            onViewDocument={(p) => setSelectedDocumentPermit(p)}
-            onPreviewImage={handlePreviewImage}
-            onResetData={handleResetData}
-            onDeletePermit={handleDeletePermit}
-            onDeleteAllApproved={handleDeleteAllApprovedPermits}
-            onCleanupExpired={handleForceCleanupExpired}
-            wakaName={wakaName}
-          />
-        )}
+          {/* 2. PORTAL GURU / WAKA: KHUSUS PERSETUJUAN, SHARE KE GURU PENGAJAR, & REKAP */}
+          {currentRole === 'GURU' && (
+            <WakaPortal
+              permits={permits}
+              onApprovePermit={handleApprovePermit}
+              onRejectPermit={handleRejectPermit}
+              onOpenWhatsApp={(p) => setSelectedWhatsAppPermit(p)}
+              onOpenShareTeacher={(p) => setSelectedShareTeacherPermit(p)}
+              onViewDocument={(p) => setSelectedDocumentPermit(p)}
+              onPreviewImage={handlePreviewImage}
+              onResetData={handleResetData}
+              onDeletePermit={handleDeletePermit}
+              onDeleteAllApproved={handleDeleteAllApprovedPermits}
+              onCleanupExpired={handleForceCleanupExpired}
+              wakaName={wakaName}
+            />
+          )}
 
-        {/* 3. PORTAL SATPAM: KHUSUS PEMINDAI QR GERBANG & LOG LINTASAN POS */}
-        {currentRole === 'SATPAM' && (
-          <SatpamPortal
-            permits={permits}
-            onCheckOut={handleCheckOut}
-            onCheckIn={handleCheckIn}
-            onViewDocument={(p) => setSelectedDocumentPermit(p)}
-            onOpenWhatsApp={(p) => setSelectedWhatsAppPermit(p)}
-            onPreviewImage={handlePreviewImage}
-          />
-        )}
+          {/* 3. PORTAL SATPAM: KHUSUS PEMINDAI QR GERBANG & LOG LINTASAN POS */}
+          {currentRole === 'SATPAM' && (
+            <SatpamPortal
+              permits={permits}
+              onCheckOut={handleCheckOut}
+              onCheckIn={handleCheckIn}
+              onViewDocument={(p) => setSelectedDocumentPermit(p)}
+              onOpenWhatsApp={(p) => setSelectedWhatsAppPermit(p)}
+              onPreviewImage={handlePreviewImage}
+            />
+          )}
+        </Suspense>
       </main>
 
       {/* Footer */}
@@ -518,35 +533,45 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Modals & Dialogs */}
-      <PermitDocumentModal
-        isOpen={!!selectedDocumentPermit}
-        onClose={() => setSelectedDocumentPermit(null)}
-        permit={selectedDocumentPermit}
-        onOpenWhatsApp={(p) => setSelectedWhatsAppPermit(p)}
-      />
+      {/* Modals & Dialogs (Loaded on Demand) */}
+      <Suspense fallback={null}>
+        {selectedDocumentPermit && (
+          <PermitDocumentModal
+            isOpen={!!selectedDocumentPermit}
+            onClose={() => setSelectedDocumentPermit(null)}
+            permit={selectedDocumentPermit}
+            onOpenWhatsApp={(p) => setSelectedWhatsAppPermit(p)}
+          />
+        )}
 
-      <WhatsAppModal
-        isOpen={!!selectedWhatsAppPermit}
-        onClose={() => setSelectedWhatsAppPermit(null)}
-        permit={selectedWhatsAppPermit}
-        onMarkAsSent={handleMarkWhatsAppSent}
-      />
+        {selectedWhatsAppPermit && (
+          <WhatsAppModal
+            isOpen={!!selectedWhatsAppPermit}
+            onClose={() => setSelectedWhatsAppPermit(null)}
+            permit={selectedWhatsAppPermit}
+            onMarkAsSent={handleMarkWhatsAppSent}
+          />
+        )}
 
-      <ShareTeacherModal
-        isOpen={!!selectedShareTeacherPermit}
-        onClose={() => setSelectedShareTeacherPermit(null)}
-        permit={selectedShareTeacherPermit}
-        onMarkShared={handleMarkSharedToTeacher}
-      />
+        {selectedShareTeacherPermit && (
+          <ShareTeacherModal
+            isOpen={!!selectedShareTeacherPermit}
+            onClose={() => setSelectedShareTeacherPermit(null)}
+            permit={selectedShareTeacherPermit}
+            onMarkShared={handleMarkSharedToTeacher}
+          />
+        )}
 
-      <ImagePreviewModal
-        isOpen={previewImageState.isOpen}
-        onClose={() => setPreviewImageState((prev) => ({ ...prev, isOpen: false }))}
-        imageUrl={previewImageState.imageUrl}
-        title={previewImageState.title}
-        studentName={previewImageState.studentName}
-      />
+        {previewImageState.isOpen && (
+          <ImagePreviewModal
+            isOpen={previewImageState.isOpen}
+            onClose={() => setPreviewImageState((prev) => ({ ...prev, isOpen: false }))}
+            imageUrl={previewImageState.imageUrl}
+            title={previewImageState.title}
+            studentName={previewImageState.studentName}
+          />
+        )}
+      </Suspense>
 
       {/* Floating Notifications */}
       <ToastContainer notifications={notifications} onDismiss={dismissToast} />
